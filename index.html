@@ -3,95 +3,205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PRISMA Grok UI</title>
+    <title>PRISMA Pro UI</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --accent: #a855f7; --bg: #08080a; --panel: #111118; --border: #1c1c2b; --text-muted: #4e4e61; }
-        body { background-color: var(--bg); color: #ffffff; font-family: -apple-system, sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; overflow: hidden; }
-        
-        /* Боковая панель: История чатов */
-        .sidebar { width: 260px; background-color: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; transition: 0.3s; }
-        .new-chat-btn { margin: 15px; padding: 12px; border: 1px dashed var(--accent); border-radius: 12px; text-align: center; cursor: pointer; font-weight: bold; color: var(--accent); transition: 0.2s; }
-        .new-chat-btn:hover { background: rgba(168, 85, 247, 0.1); }
-        .chat-history { flex: 1; overflow-y: auto; padding: 0 15px; }
-        .history-item { padding: 10px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #161622; }
-        .history-item:hover { background: var(--border); }
+        :root { --bg-main: #0a0a0a; --bg-card: #161618; --border: #222224; --text-main: #ffffff; --text-muted: #707075; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-main); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; overflow: hidden; }
 
-        /* Главный экран */
-        .main-wrapper { flex: 1; display: flex; flex-direction: column; background: var(--bg); }
-        .header { display: flex; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid var(--border); align-items: center; }
-        .tabs { display: flex; gap: 20px; }
-        .tab { font-size: 15px; font-weight: bold; color: var(--text-muted); cursor: pointer; padding-bottom: 4px; }
-        .tab.active { color: #ffffff; border-bottom: 2px solid var(--accent); }
-        
-        /* Окно чата и настроек */
-        .content-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-        .chat-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        .welcome-screen { margin: auto; text-align: center; }
-        .logo-img { width: 90px; height: 90px; border-radius: 50%; border: 2px solid var(--accent); box-shadow: 0 0 20px rgba(168, 85, 247, 0.4); }
-        
-        /* Экран настроек */
-        .settings-screen { display: none; padding: 20px; overflow-y: auto; height: 100%; box-sizing: border-box; }
-        .settings-group { margin-bottom: 20px; }
-        .settings-group label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: var(--accent); }
-        .settings-group textarea { width: 100%; height: 120px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; color: #fff; padding: 12px; box-sizing: border-box; resize: none; outline: none; }
+        /* Боковая панель (Меню) */
+        .sidebar { width: 280px; background-color: var(--bg-main); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10; position: absolute; height: 100%; transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .sidebar.open { transform: translateX(0); }
+        .profile-section { padding: 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
+        .avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; background: #222; }
+        .profile-info { flex: 1; overflow: hidden; }
+        .profile-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .profile-email { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .menu-scroll { flex: 1; overflow-y: auto; padding: 15px 10px; }
+        .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1px; margin: 15px 10px 8px 10px; }
+        .chat-item { padding: 10px 12px; border-radius: 12px; font-size: 14px; cursor: pointer; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+        .chat-item.active { background-color: var(--bg-card); font-weight: 500; }
+        .sidebar-footer { padding: 15px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .icon-btn { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; color: var(--text-main); }
+        .icon-btn:active { background-color: var(--bg-card); }
 
-        /* Сообщения в чате */
-        .msg { max-width: 80%; padding: 12px 16px; border-radius: 16px; font-size: 15px; margin-bottom: 5px; }
-        .msg.user { background: var(--accent); align-self: flex-end; color: #fff; }
-        .msg.bot { background: var(--panel); align-self: flex-start; border: 1px solid var(--border); }
+        /* Основной контейнер */
+        .main-view { flex: 1; display: flex; flex-direction: column; height: 100vh; position: relative; width: 100%; }
+        .overlay { position: absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); display:none; z-index: 5; }
+        .overlay.active { display: block; }
 
-        /* Ввод */
-        .bottom-container { padding: 15px; background-color: var(--bg); }
-        .input-box { display: flex; align-items: center; background-color: var(--panel); border: 1px solid var(--border); border-radius: 24px; padding: 10px 16px; gap: 12px; }
-        input { flex: 1; background: none; border: none; color: #ffffff; font-size: 15px; outline: none; }
-        .send-btn { background-color: var(--accent); color: #ffffff; padding: 6px 14px; border-radius: 18px; font-size: 13px; font-weight: bold; cursor: pointer; }
+        /* Хедер */
+        .header { height: 56px; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; justify-content: space-between; background: var(--bg-main); }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .menu-trigger { cursor: pointer; display: flex; flex-direction: column; gap: 5px; width: 20px; }
+        .menu-trigger span { width: 100%; height: 2px; background-color: var(--text-main); border-radius: 2px; }
+        .screen-title { font-size: 17px; font-weight: 600; letter-spacing: 0.3px; }
+
+        /* Экраны */
+        .screen { flex: 1; display: none; flex-direction: column; overflow: hidden; background: var(--bg-main); }
+        .screen.active { display: flex; }
+
+        /* Чат-пространство */
+        .chat-space { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; position: relative; }
         
-        @media (max-width: 600px) { .sidebar { display: none; } } /* Скрываем сайдбар на мобилках для компактности */
+        /* Прозрачный серый треугольник на фоне */
+        .bg-logo-triangle { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 110px; height: 110px; opacity: 0.12; pointer-events: none; fill: #ffffff; }
+        .welcome-sub { text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 140px; z-index: 2; }
+        
+        /* Сообщения */
+        .msg-row { display: flex; flex-direction: column; width: 100%; }
+        .msg { max-width: 85%; padding: 14px 18px; border-radius: 20px; font-size: 15px; line-height: 1.45; word-wrap: break-word; }
+        .msg.user { background-color: var(--bg-card); color: var(--text-main); align-self: flex-end; border-bottom-right-radius: 4px; }
+        .msg.bot { background-color: transparent; color: var(--text-main); align-self: flex-start; padding: 5px 0; }
+        
+        /* Статус размышления (Сфера) */
+        .thinking-status { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 14px; align-self: flex-start; margin-top: 5px; }
+        .sphere-loader { width: 12px; height: 12px; background: #ffffff; border-radius: 50%; opacity: 0.4; animation: pulseSphere 1.2s infinite ease-in-out; }
+        @keyframes pulseSphere { 0%, 100% { transform: scale(0.8); opacity: 0.3; } 50% { transform: scale(1.2); opacity: 0.8; } }
+
+        /* Панель ввода */
+        .input-area { padding: 16px; background: var(--bg-main); }
+        .input-wrapper { background-color: var(--bg-card); border-radius: 28px; padding: 8px 14px; display: flex; flex-direction: column; gap: 8px; }
+        .input-field-row { display: flex; align-items: center; width: 100%; }
+        .input-wrapper input { flex: 1; background: none; border: none; color: var(--text-main); font-size: 16px; outline: none; padding: 6px 4px; }
+        .input-wrapper input::placeholder { color: var(--text-muted); }
+        
+        /* Ряд иконок в инпуте */
+        .input-tools { display: flex; align-items: center; justify-content: space-between; width: 100%; padding-top: 2px; }
+        .tools-left { display: flex; align-items: center; gap: 14px; color: var(--text-muted); font-size: 18px; }
+        .tool-icon { cursor: pointer; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+        .tools-right { display: flex; align-items: center; gap: 8px; }
+        .voice-mode-btn { background: #ffffff; color: #000000; font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 16px; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+        .arrow-send-btn { width: 32px; height: 32px; background: #ffffff; color: #000000; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold; }
+
+        /* Экран настроек (Android Style) */
+        .settings-container { flex: 1; overflow-y: auto; padding: 10px 0; }
+        .settings-profile-card { background: var(--bg-card); margin: 10px 16px 20px 16px; padding: 16px; border-radius: 20px; display: flex; align-items: center; gap: 14px; }
+        .settings-group-title { font-size: 13px; font-weight: 600; color: var(--text-muted); margin: 15px 20px 8px 20px; }
+        .settings-item { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border-bottom: 1px solid #121214; }
+        .settings-item:active { background: var(--bg-card); }
+        .settings-item-left { display: flex; flex-direction: column; gap: 4px; }
+        .settings-item-title { font-size: 15px; font-weight: 500; }
+        .settings-item-sub { font-size: 12px; color: var(--text-muted); }
+
+        /* Экран кастомизации агентов */
+        .agents-space { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+        .agent-card { background: var(--bg-card); border-radius: 16px; padding: 16px; display: flex; align-items: center; gap: 14px; }
+        .agent-avatar-mini { width: 36px; height: 36px; background: #444; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size:16px; }
+        .textarea-box { background: var(--bg-card); border-radius: 16px; padding: 14px; margin: 10px 0; border: 1px solid var(--border); }
+        textarea { width: 100%; height: 140px; background: none; border: none; color: #fff; resize: none; outline: none; font-size: 15px; line-height: 1.4; font-family: inherit; }
+        .action-bar { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+        .btn { padding: 10px 20px; border-radius: 20px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .btn.primary { background: #ffffff; color: #000000; }
+        .btn.secondary { background: transparent; color: var(--text-muted); }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <div class="new-chat-btn" onclick="startNewChat()">+ Новый чат</div>
-        <div class="chat-history" id="historyList"></div>
+    <div class="sidebar" id="sidebar">
+        <div class="profile-section">
+            <img class="avatar" src="2237.jpg" onerror="this.src='https://placehold.co/42/222/fff?text=I'">
+            <div class="profile-info">
+                <div class="profile-name">Илья Осипов</div>
+                <div class="profile-email">maksimmihajlov8212@gmail.com</div>
+            </div>
+        </div>
+        <div class="menu-scroll">
+            <div class="section-title">Закреплено</div>
+            <div id="pinnedList"></div>
+            <div class="section-title">Разговоры</div>
+            <div id="chatList"></div>
+        </div>
+        <div class="sidebar-footer">
+            <div class="icon-btn" onclick="toggleSidebar(false); switchScreen('settings')">⚙️</div>
+            <div class="icon-btn" onclick="startNewChat()">📝</div>
+        </div>
     </div>
 
-    <div class="main-wrapper">
+    <div class="main-view">
+        <div class="overlay" id="overlay" onclick="toggleSidebar(false)"></div>
+
         <div class="header">
-            <div class="tabs">
-                <div class="tab active" id="chatTab" onclick="switchTab('chat')">PRISMA Chat</div>
-                <div class="tab" id="settingsTab" onclick="switchTab('settings')">Настройки</div>
+            <div class="header-left">
+                <div class="menu-trigger" id="menuBtn" onclick="toggleSidebar(true)">
+                    <span></span><span></span>
+                </div>
+                <div class="screen-title" id="headerTitle">Спросить</div>
             </div>
-            <div style="color: var(--accent); font-weight: bold; font-size: 14px;">⚡ Grok Ultra</div>
+            <div style="cursor: pointer; font-size: 18px;" id="headerRightAction" onclick="startNewChat()">🔄</div>
         </div>
 
-        <div class="content-area">
-            <div id="chatView" style="display: flex; flex-direction: column; height: 100%;">
-                <div class="chat-container" id="chatBox">
-                    <div class="welcome-screen" id="welcome">
-                        <img class="logo-img" src="2237.jpg" onerror="this.src='https://placehold.co/100x100/111118/a855f7?text=PRISMA'">
-                        <div style="font-size: 24px; font-weight: 700; margin-top: 15px;">Prisma</div>
-                        <div style="color: var(--text-muted); font-size: 13px; margin-top: 5px;">я есть ты, и ты есть я</div>
-                    </div>
-                </div>
-                <div class="bottom-container">
-                    <div class="input-box">
-                        <span style="color:var(--accent)">⚡</span>
-                        <input type="text" id="userIn" placeholder="Задайте наглый вопрос...">
-                        <div class="send-btn" onclick="sendMessage()">Спросить</div>
-                    </div>
-                </div>
+        <div class="screen active" id="screenChat">
+            <div class="chat-space" id="chatSpace">
+                <svg class="bg-logo-triangle" id="bgLogo" viewBox="0 0 100 100">
+                    <polygon points="50,85 15,25 85,25"/>
+                </svg>
+                <div class="welcome-sub" id="welcomeText">Задай любой вопрос</div>
             </div>
-
-            <div id="settingsView" class="settings-screen">
-                <div class="settings-group">
-                    <label>Персонализированные инструкции (Системный промпт)</label>
-                    <textarea id="customInstructions" placeholder="Например: Отвечай мне как Акаши Сейджуро, используй жесткий сарказм и подколы..." oninput="saveInstructions()"></textarea>
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <div class="input-field-row">
+                        <input type="text" id="userIn" placeholder="Задай вопрос" onkeypress="if(event.key==='Enter') sendMessage()">
+                    </div>
+                    <div class="input-tools">
+                        <div class="tools-left">
+                            <span class="tool-icon">＋</span>
+                            <span class="tool-icon">⚡</span>
+                        </div>
+                        <div class="tools-right">
+                            <div class="voice-mode-btn">
+                                <span>🎙️</span> Голосовой режим
+                            </div>
+                            <div class="arrow-send-btn" onclick="sendMessage()">↑</div>
+                        </div>
+                    </div>
                 </div>
-                <div style="color: var(--text-muted); font-size: 12px;">Все настройки и история чатов сохраняются локально на твоем Vivo.</div>
             </div>
         </div>
+
+        <div class="screen" id="screenSettings">
+            <div class="settings-container">
+                <div class="settings-profile-card">
+                    <img class="avatar" src="2237.jpg" onerror="this.src='https://placehold.co/42/222/fff?text=I'">
+                    <div class="profile-info">
+                        <div class="profile-name" style="font-size:17px;">Илья Осипов</div>
+                        <div class="profile-email">maksimmihajlov8212@gmail.com</div>
+                    </div>
+                </div>
+                <div class="settings-group-title">Приложение</div>
+                <div class="settings-item"><div class="settings-item-left"><div class="settings-item-title">Внешний вид</div><div class="settings-item-sub">Системный</div></div></div>
+                <div class="settings-item"><div class="settings-item-left"><div class="settings-item-title">Тактильный отклик</div></div></div>
+                <div class="settings-group-title">Prisma</div>
+                <div class="settings-item" onclick="switchScreen('agents')">
+                    <div class="settings-item-left">
+                        <div class="settings-item-title">Персонализировать Prisma</div>
+                    </div>
+                    <div style="color:var(--text-muted);">❯</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="screen" id="screenAgents">
+            <div class="agents-space">
+                <div style="font-size: 14px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">Твои агенты</div>
+                <div class="agent-card">
+                    <div class="agent-avatar-mini">📐</div>
+                    <div>
+                        <div style="font-weight:600; font-size:15px;">Prisma Системные инструкции</div>
+                        <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Нажми на поле ниже, чтобы переписать инструкции</div>
+                    </div>
+                </div>
+                <div class="textarea-box">
+                    <textarea id="systemPromptInput" placeholder="Вставь сюда инструкции (например про любимые аниме, сленг, характер общения)..."></textarea>
+                </div>
+                <div class="action-bar">
+                    <div class="btn secondary" onclick="switchScreen('settings')">Назад</div>
+                    <div class="btn primary" onclick="saveInstructions()">Сохранить</div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -99,105 +209,129 @@
         tg.expand();
         tg.ready();
 
-        let currentChatId = Date.now().toString();
-        let chats = JSON.parse(localStorage.getItem('prisma_chats')) || {};
+        let state = JSON.parse(localStorage.getItem('prisma_pro_state')) || { chats: {}, activeChatId: null, systemPrompt: "" };
 
-        // Загрузка инструкций при старте
-        document.getElementById('customInstructions').value = localStorage.getItem('prisma_instructions') || "";
+        function saveState() { localStorage.setItem('prisma_pro_state', JSON.stringify(state)); }
 
-        // При повторном запуске — всегда создаем чистый новый чат, сохраняя старый контекст в историю!
-        window.onload = function() {
-            startNewChat();
-            renderHistory();
-        };
-
-        function switchTab(tab) {
-            if(tab === 'chat') {
-                document.getElementById('chatView').style.display = 'flex';
-                document.getElementById('settingsView').style.display = 'none';
-                document.getElementById('chatTab').classList.add('active');
-                document.getElementById('settingsTab').classList.remove('active');
-            } else {
-                document.getElementById('chatView').style.display = 'none';
-                document.getElementById('settingsView').style.display = 'block';
-                document.getElementById('chatTab').classList.remove('active');
-                document.getElementById('settingsTab').classList.add('active');
-            }
+        function toggleSidebar(open) {
+            document.getElementById('sidebar').classList.toggle('open', open);
+            document.getElementById('overlay').classList.toggle('active', open);
         }
 
-        function saveInstructions() {
-            let text = document.getElementById('customInstructions').value;
-            localStorage.setItem('prisma_instructions', text);
+        function switchScreen(screen) {
+            document.getElementById('screenChat').classList.toggle('active', screen === 'chat');
+            document.getElementById('screenSettings').classList.toggle('active', screen === 'settings');
+            document.getElementById('screenAgents').classList.toggle('active', screen === 'agents');
+            
+            let title = 'Спросить';
+            let rightAction = '🔄';
+            if (screen === 'settings') { title = 'Настройки'; rightAction = '❌'; }
+            if (screen === 'agents') { title = 'Настроить'; rightAction = '❌'; }
+            
+            document.getElementById('headerTitle').innerText = title;
+            let rBtn = document.getElementById('headerRightAction');
+            rBtn.innerText = rightAction;
+            rBtn.onclick = (screen === 'chat') ? startNewChat : () => switchScreen('chat');
+        }
+
+        function renderChats() {
+            let list = document.getElementById('chatList');
+            list.innerHTML = '';
+            Object.keys(state.chats).reverse().forEach(id => {
+                let item = document.createElement('div');
+                item.className = `chat-item ${id === state.activeChatId ? 'active' : ''}`;
+                item.innerText = state.chats[id].title || 'Новый диалог';
+                item.onclick = () => { loadChat(id); toggleSidebar(false); };
+                list.appendChild(item);
+            });
         }
 
         function startNewChat() {
-            currentChatId = Date.now().toString();
-            document.getElementById('chatBox').innerHTML = '';
-            // Возвращаем приветствие
-            document.getElementById('chatBox').appendChild(document.getElementById('welcome'));
-            document.getElementById('welcome').style.display = 'block';
-        }
-
-        function sendMessage() {
-            let input = document.getElementById("userIn");
-            let text = input.value.trim();
-            if(text === "") return;
-
-            document.getElementById('welcome').style.display = 'none';
-
-            // Отрисовка сообщения юзера на экране
-            appendMessage(text, 'user');
-            
-            // Сохраняем в историю текущего чата
-            if(!chats[currentChatId]) chats[currentChatId] = [];
-            chats[currentChatId].push({ role: 'user', text: text });
-            localStorage.setItem('prisma_chats', JSON.stringify(chats));
-            renderHistory();
-
-            // Собираем полный пакет данных для отправки Python-боту: текст + инструкции
-            let customPrompt = localStorage.getItem('prisma_instructions') || "";
-            let payload = {
-                text: text,
-                instructions: customPrompt,
-                chat_id: currentChatId
-            };
-
-            // Отправляем пакет данных обратно в Telegram-бота!
-            tg.sendData(JSON.stringify(payload));
-            input.value = "";
-        }
-
-        function appendMessage(text, role) {
-            let box = document.getElementById('chatBox');
-            let el = document.createElement('div');
-            el.className = `msg ${role}`;
-            el.innerText = text;
-            box.appendChild(el);
-            box.scrollTop = box.scrollHeight;
-        }
-
-        function renderHistory() {
-            let list = document.getElementById('historyList');
-            list.innerHTML = '';
-            for(let id in chats) {
-                if(chats[id].length > 0) {
-                    let el = document.createElement('div');
-                    el.className = 'history-item';
-                    el.innerText = chats[id][0].text; // Первое сообщение как заголовок
-                    el.onclick = () => loadChat(id);
-                    list.appendChild(el);
-                }
-            }
+            let id = 'chat_' + Date.now();
+            state.chats[id] = { title: '', messages: [] };
+            state.activeChatId = id;
+            saveState();
+            renderChats();
+            loadChat(id);
+            switchScreen('chat');
         }
 
         function loadChat(id) {
-            currentChatId = id;
-            document.getElementById('welcome').style.display = 'none';
-            let box = document.getElementById('chatBox');
-            box.innerHTML = '';
-            chats[id].forEach(m => appendMessage(m.text, m.role));
-            switchTab('chat');
+            state.activeChatId = id;
+            saveState();
+            renderChats();
+            
+            let space = document.getElementById('chatSpace');
+            space.innerHTML = `
+                <svg class="bg-logo-triangle" id="bgLogo" viewBox="0 0 100 100"><polygon points="50,85 15,25 85,25"/></svg>
+                <div class="welcome-sub" id="welcomeText">Задай любой вопрос</div>
+            `;
+            
+            let chat = state.chats[id];
+            if (!chat || chat.messages.length === 0) return;
+
+            document.getElementById('bgLogo').style.display = 'none';
+            document.getElementById('welcomeText').style.display = 'none';
+
+            chat.messages.forEach(m => {
+                let row = document.createElement('div');
+                row.className = 'msg-row';
+                let div = document.createElement('div');
+                div.className = `msg ${m.role}`;
+                div.innerText = m.text;
+                row.appendChild(div);
+                space.appendChild(row);
+            });
+            space.scrollTop = space.scrollHeight;
         }
+
+        function sendMessage() {
+            let inp = document.getElementById('userIn');
+            let text = inp.value.trim();
+            if (!text) return;
+
+            if (!state.activeChatId) startNewChat();
+            let chat = state.chats[state.activeChatId];
+            
+            if (chat.messages.length === 0) {
+                chat.title = text.substring(0, 24);
+                document.getElementById('bgLogo').style.display = 'none';
+                document.getElementById('welcomeText').style.display = 'none';
+            }
+
+            chat.messages.push({ role: 'user', text: text });
+            inp.value = '';
+            loadChat(state.activeChatId);
+
+            // Отрезаем всё лишнее, создаем сферу размышления
+            let space = document.getElementById('chatSpace');
+            let loaderRow = document.createElement('div');
+            loaderRow.className = 'msg-row';
+            loaderRow.id = 'loader_tmp';
+            loaderRow.innerHTML = `
+                <div class="thinking-status">
+                    <div class="sphere-loader"></div>
+                    <span>Thinking about your request...</span>
+                </div>
+            `;
+            space.appendChild(loaderRow);
+            space.scrollTop = space.scrollHeight;
+
+            let packet = { prompt: state.systemPrompt, history: chat.messages, text: text };
+            tg.sendData(JSON.stringify(packet));
+        }
+
+        function saveInstructions() {
+            state.systemPrompt = document.getElementById('systemPromptInput').value;
+            saveState();
+            tg.showAlert("Инструкции вшиты в ядро Prisma! 🧬");
+            switchScreen('chat');
+        }
+
+        window.onload = () => {
+            document.getElementById('systemPromptInput').value = state.systemPrompt || "";
+            startNewChat();
+        };
     </script>
 </body>
 </html>
