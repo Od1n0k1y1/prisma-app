@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PRISMA Grok UI</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root { --accent: #a855f7; --bg: #08080a; --panel: #111118; --border: #1c1c2b; --text-muted: #4e4e61; }
+        body { background-color: var(--bg); color: #ffffff; font-family: -apple-system, sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Боковая панель: История чатов */
+        .sidebar { width: 260px; background-color: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; transition: 0.3s; }
+        .new-chat-btn { margin: 15px; padding: 12px; border: 1px dashed var(--accent); border-radius: 12px; text-align: center; cursor: pointer; font-weight: bold; color: var(--accent); transition: 0.2s; }
+        .new-chat-btn:hover { background: rgba(168, 85, 247, 0.1); }
+        .chat-history { flex: 1; overflow-y: auto; padding: 0 15px; }
+        .history-item { padding: 10px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #161622; }
+        .history-item:hover { background: var(--border); }
+
+        /* Главный экран */
+        .main-wrapper { flex: 1; display: flex; flex-direction: column; background: var(--bg); }
+        .header { display: flex; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid var(--border); align-items: center; }
+        .tabs { display: flex; gap: 20px; }
+        .tab { font-size: 15px; font-weight: bold; color: var(--text-muted); cursor: pointer; padding-bottom: 4px; }
+        .tab.active { color: #ffffff; border-bottom: 2px solid var(--accent); }
+        
+        /* Окно чата и настроек */
+        .content-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .chat-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .welcome-screen { margin: auto; text-align: center; }
+        .logo-img { width: 90px; height: 90px; border-radius: 50%; border: 2px solid var(--accent); box-shadow: 0 0 20px rgba(168, 85, 247, 0.4); }
+        
+        /* Экран настроек */
+        .settings-screen { display: none; padding: 20px; overflow-y: auto; height: 100%; box-sizing: border-box; }
+        .settings-group { margin-bottom: 20px; }
+        .settings-group label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: var(--accent); }
+        .settings-group textarea { width: 100%; height: 120px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; color: #fff; padding: 12px; box-sizing: border-box; resize: none; outline: none; }
+
+        /* Сообщения в чате */
+        .msg { max-width: 80%; padding: 12px 16px; border-radius: 16px; font-size: 15px; margin-bottom: 5px; }
+        .msg.user { background: var(--accent); align-self: flex-end; color: #fff; }
+        .msg.bot { background: var(--panel); align-self: flex-start; border: 1px solid var(--border); }
+
+        /* Ввод */
+        .bottom-container { padding: 15px; background-color: var(--bg); }
+        .input-box { display: flex; align-items: center; background-color: var(--panel); border: 1px solid var(--border); border-radius: 24px; padding: 10px 16px; gap: 12px; }
+        input { flex: 1; background: none; border: none; color: #ffffff; font-size: 15px; outline: none; }
+        .send-btn { background-color: var(--accent); color: #ffffff; padding: 6px 14px; border-radius: 18px; font-size: 13px; font-weight: bold; cursor: pointer; }
+        
+        @media (max-width: 600px) { .sidebar { display: none; } } /* Скрываем сайдбар на мобилках для компактности */
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="new-chat-btn" onclick="startNewChat()">+ Новый чат</div>
+        <div class="chat-history" id="historyList"></div>
+    </div>
+
+    <div class="main-wrapper">
+        <div class="header">
+            <div class="tabs">
+                <div class="tab active" id="chatTab" onclick="switchTab('chat')">PRISMA Chat</div>
+                <div class="tab" id="settingsTab" onclick="switchTab('settings')">Настройки</div>
+            </div>
+            <div style="color: var(--accent); font-weight: bold; font-size: 14px;">⚡ Grok Ultra</div>
+        </div>
+
+        <div class="content-area">
+            <div id="chatView" style="display: flex; flex-direction: column; height: 100%;">
+                <div class="chat-container" id="chatBox">
+                    <div class="welcome-screen" id="welcome">
+                        <img class="logo-img" src="2237.jpg" onerror="this.src='https://placehold.co/100x100/111118/a855f7?text=PRISMA'">
+                        <div style="font-size: 24px; font-weight: 700; margin-top: 15px;">Prisma</div>
+                        <div style="color: var(--text-muted); font-size: 13px; margin-top: 5px;">я есть ты, и ты есть я</div>
+                    </div>
+                </div>
+                <div class="bottom-container">
+                    <div class="input-box">
+                        <span style="color:var(--accent)">⚡</span>
+                        <input type="text" id="userIn" placeholder="Задайте наглый вопрос...">
+                        <div class="send-btn" onclick="sendMessage()">Спросить</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="settingsView" class="settings-screen">
+                <div class="settings-group">
+                    <label>Персонализированные инструкции (Системный промпт)</label>
+                    <textarea id="customInstructions" placeholder="Например: Отвечай мне как Акаши Сейджуро, используй жесткий сарказм и подколы..." oninput="saveInstructions()"></textarea>
+                </div>
+                <div style="color: var(--text-muted); font-size: 12px;">Все настройки и история чатов сохраняются локально на твоем Vivo.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+
+        let currentChatId = Date.now().toString();
+        let chats = JSON.parse(localStorage.getItem('prisma_chats')) || {};
+
+        // Загрузка инструкций при старте
+        document.getElementById('customInstructions').value = localStorage.getItem('prisma_instructions') || "";
+
+        // При повторном запуске — всегда создаем чистый новый чат, сохраняя старый контекст в историю!
+        window.onload = function() {
+            startNewChat();
+            renderHistory();
+        };
+
+        function switchTab(tab) {
+            if(tab === 'chat') {
+                document.getElementById('chatView').style.display = 'flex';
+                document.getElementById('settingsView').style.display = 'none';
+                document.getElementById('chatTab').classList.add('active');
+                document.getElementById('settingsTab').classList.remove('active');
+            } else {
+                document.getElementById('chatView').style.display = 'none';
+                document.getElementById('settingsView').style.display = 'block';
+                document.getElementById('chatTab').classList.remove('active');
+                document.getElementById('settingsTab').classList.add('active');
+            }
+        }
+
+        function saveInstructions() {
+            let text = document.getElementById('customInstructions').value;
+            localStorage.setItem('prisma_instructions', text);
+        }
+
+        function startNewChat() {
+            currentChatId = Date.now().toString();
+            document.getElementById('chatBox').innerHTML = '';
+            // Возвращаем приветствие
+            document.getElementById('chatBox').appendChild(document.getElementById('welcome'));
+            document.getElementById('welcome').style.display = 'block';
+        }
+
+        function sendMessage() {
+            let input = document.getElementById("userIn");
+            let text = input.value.trim();
+            if(text === "") return;
+
+            document.getElementById('welcome').style.display = 'none';
+
+            // Отрисовка сообщения юзера на экране
+            appendMessage(text, 'user');
+            
+            // Сохраняем в историю текущего чата
+            if(!chats[currentChatId]) chats[currentChatId] = [];
+            chats[currentChatId].push({ role: 'user', text: text });
+            localStorage.setItem('prisma_chats', JSON.stringify(chats));
+            renderHistory();
+
+            // Собираем полный пакет данных для отправки Python-боту: текст + инструкции
+            let customPrompt = localStorage.getItem('prisma_instructions') || "";
+            let payload = {
+                text: text,
+                instructions: customPrompt,
+                chat_id: currentChatId
+            };
+
+            // Отправляем пакет данных обратно в Telegram-бота!
+            tg.sendData(JSON.stringify(payload));
+            input.value = "";
+        }
+
+        function appendMessage(text, role) {
+            let box = document.getElementById('chatBox');
+            let el = document.createElement('div');
+            el.className = `msg ${role}`;
+            el.innerText = text;
+            box.appendChild(el);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function renderHistory() {
+            let list = document.getElementById('historyList');
+            list.innerHTML = '';
+            for(let id in chats) {
+                if(chats[id].length > 0) {
+                    let el = document.createElement('div');
+                    el.className = 'history-item';
+                    el.innerText = chats[id][0].text; // Первое сообщение как заголовок
+                    el.onclick = () => loadChat(id);
+                    list.appendChild(el);
+                }
+            }
+        }
+
+        function loadChat(id) {
+            currentChatId = id;
+            document.getElementById('welcome').style.display = 'none';
+            let box = document.getElementById('chatBox');
+            box.innerHTML = '';
+            chats[id].forEach(m => appendMessage(m.text, m.role));
+            switchTab('chat');
+        }
+    </script>
+</body>
+</html>
